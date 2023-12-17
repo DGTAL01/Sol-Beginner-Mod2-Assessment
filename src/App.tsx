@@ -97,20 +97,28 @@ export default function App() {
    */
   const createSender = async () => {
     // create a new Keypair
+    const kpair = Keypair.generate();
 
-
-    console.log('Sender account: ', senderKeypair!.publicKey.toString());
+    console.log('Sender account: ', kpair!.publicKey.toString());
     console.log('Airdropping 2 SOL to Sender Wallet');
 
     // save this new KeyPair into this state variable
-    setSenderKeypair(/*KeyPair here*/);
+    setSenderKeypair(kpair);
 
     // request airdrop into this new account
-    
+    const airdropSignature = await connection.requestAirdrop(
+      kpair.publicKey,
+      2 *LAMPORTS_PER_SOL
+    )
 
     const latestBlockHash = await connection.getLatestBlockhash();
 
     // now confirm the transaction
+    await connection.confirmTransaction({
+      blockhash: latestBlockHash.blockhash,
+      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      signature: airdropSignature,
+    });
 
     console.log('Wallet Balance: ' + (await connection.getBalance(senderKeypair!.publicKey)) / LAMPORTS_PER_SOL);
   }
@@ -127,9 +135,9 @@ export default function App() {
     if (solana) {
       try {
         // connect to phantom wallet and return response which includes the wallet public key
-
+const phantomWallet = await solana.connect();
         // save the public key of the phantom wallet to the state variable
-        setReceiverPublicKey(/*PUBLIC KEY*/);
+        setReceiverPublicKey(phantomWallet.publicKey);
       } catch (err) {
         console.log(err);
       }
@@ -163,10 +171,22 @@ export default function App() {
   const transferSol = async () => {    
     
     // create a new transaction for the transfer
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: senderKeypair!.publicKey,
+        toPubkey: receiverPublicKey!,
+        lamports: 1 * LAMPORTS_PER_SOL
+      })
+    )
 
     // send and confirm the transaction
+const tfSignature = await sendAndConfirmTransaction(
+      connection,
+      transaction,
+      [senderKeypair!]
+    )
 
-    console.log("transaction sent and confirmed");
+    console.log("transaction sent and confirmed",tfSignature);
     console.log("Sender Balance: " + await connection.getBalance(senderKeypair!.publicKey) / LAMPORTS_PER_SOL);
     console.log("Receiver Balance: " + await connection.getBalance(receiverPublicKey!) / LAMPORTS_PER_SOL);
   };
